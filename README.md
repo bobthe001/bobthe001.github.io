@@ -9,7 +9,7 @@
 <body>
     <header>
         <h1>Welcome to My Project Showcase</h1>
-        <p>So far I have only developed a test version and I am still learning HTML</p></p>
+        <p>So far I have only developed a test version and I am still learning HTML</p>
     </header>
     <main id="projects">
         <!-- Project items will go here -->
