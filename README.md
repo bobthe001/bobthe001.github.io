@@ -9,13 +9,13 @@
 <body>
     <header>
         <h1>Welcome to My Project Showcase</h1>
-        <p>A collection of my projects with images and descriptions.</p>
+        <p>So far I have only developed a test version and I am still learning HTML</p></p>
     </header>
     <main id="projects">
         <!-- Project items will go here -->
     </main>
     <footer>
-        <p>&copy; 2024 Your Name</p>
+        <p>&copy; 2024 Ayrton G</p>
     </footer>
 </body>
 </html>
