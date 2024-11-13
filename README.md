@@ -8,7 +8,7 @@
 </head>
 <body>
     <header>
-        <h1>Welcome to My Project Showcase</h1>
+        <h1>Welcome dear viewer. This site will not send your IP to me(hopefully it will).</h1>
         <p>So far I have only developed a test version and I am still learning HTML</p>
     </header>
     <main id="projects">
