@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>I know where you live!</title>
     <script>
-        // Function to get and display the user's location
         async function getLocation() {
             try {
                 const response = await fetch('https://ipapi.co/json/');
@@ -17,8 +16,6 @@
                     "Unable to fetch your location.";
             }
         }
-
-        // Call the function when the page loads
         window.onload = getLocation;
     </script>
 </head>
@@ -28,7 +25,6 @@
         <p id="location">Determining your location...</p>
     </header>
     <main id="projects">
-        <!-- Project content goes here -->
     </main>
     <footer>
         <p>&copy; 2024 Your Name</p>
