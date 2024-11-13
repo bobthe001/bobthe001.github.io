@@ -1,24 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Project Showcase</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <header>
-        <h1>Welcome to My Project Showcase</h1>
-        <p id="location">Determining your location...</p>
-    </header>
-    <main>
-        <!-- Add your projects or other content here -->
-    </main>
-    <footer>
-        <p>&copy; 2024 Your Name</p>
-    </footer>
-
-    script.js
-    
-</body>
-</html>
+Why did you let the name of a file controll you?
+Next time think who you're listening to.
+I can be controlled by a child.
+They can name me whatever they want.
+So you could be controlled be a 6-year-old.
