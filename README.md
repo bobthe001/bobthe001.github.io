@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>I know where you live!</title>
+    <title>Project Showcase</title>
     <script>
         async function getLocation() {
             try {
@@ -21,10 +21,11 @@
 </head>
 <body>
     <header>
-        <h1>GIMME £10 not to sell your info!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!</h1>
+        <h1>Welcome to My Project Showcase</h1>
         <p id="location">Determining your location...</p>
     </header>
     <main id="projects">
+        <!-- Project content goes here -->
     </main>
     <footer>
         <p>&copy; 2024 Your Name</p>
