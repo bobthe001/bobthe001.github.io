@@ -18,7 +18,7 @@
         <p>&copy; 2024 Your Name</p>
     </footer>
 
-    <!-- Link to JavaScript file -->
-    <script src="script.js"></script>
+    script.js
+    
 </body>
 </html>
