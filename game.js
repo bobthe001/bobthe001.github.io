@@ -1,27 +1,57 @@
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x87ceeb);
-scene.fog = new THREE.Fog(0x87ceeb, 40, 140);
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
 
-const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: "high-performance" });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-document.body.appendChild(renderer.domElement);
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resize);
+resize();
 
-scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-const dirLight = new THREE.DirectionalLight(0xffffff, 0.5);
-dirLight.position.set(50, 100, 50);
-scene.add(dirLight);
-
+// Game State
 let cash = 0;
 let wanted = 0;
 let inCar = null;
 let lastShot = 0;
 const keys = {};
+
+const player = { x: 0, z: 0, angle: 0, speed: 0 };
 const bullets = [];
 const peds = [];
-const cars = [];
+const cars = [
+  { x: 12, z: 10, angle: 0, speed: 0, color: '#ef4444' },
+  { x: -18, z: -20, angle: 1.5, speed: 0, color: '#10b981' },
+  { x: 25, z: 30, angle: 3.1, speed: 0, color: '#f59e0b' },
+  { x: -30, z: 35, angle: 0.5, speed: 0, color: '#8b5cf6' }
+];
+
+// Create 3D City Buildings & Bank
 const buildings = [];
+for (let x = -120; x <= 120; x += 45) {
+  for (let z = -120; z <= 120; z += 45) {
+    if (x === 0 && z === 0) continue;
+    const isBank = (x === 45 && z === -45);
+    buildings.push({
+      x: x, z: z, w: 22, d: 22,
+      h: isBank ? 16 : 12 + ((Math.abs(x * z) % 18)),
+      color: isBank ? '#d97706' : '#64748b',
+      topColor: isBank ? '#f59e0b' : '#94a3b8',
+      isBank: isBank
+    });
+  }
+}
+const bankPad = { x: 45, z: -28 };
+
+// Spawn Pedestrians
+function spawnPed() {
+  peds.push({
+    x: (Math.random() - 0.5) * 180,
+    z: (Math.random() - 0.5) * 180,
+    dir: Math.random() * Math.PI * 2,
+    timer: 60
+  });
+}
+for (let i = 0; i < 25; i++) spawnPed();
 
 function updateHUD() {
   document.getElementById('cash').textContent = '$' + cash;
@@ -29,98 +59,22 @@ function updateHUD() {
   document.getElementById('mode').textContent = inCar ? 'Driving' : 'On Foot';
 }
 
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(300, 300),
-  new THREE.MeshLambertMaterial({ color: 0x333333 })
-);
-ground.rotation.x = -Math.PI / 2;
-scene.add(ground);
-
-const boxGeo = new THREE.BoxGeometry(1, 1, 1);
-for (let x = -80; x <= 80; x += 40) {
-  for (let z = -80; z <= 80; z += 40) {
-    if (x === 0 && z === 0) continue;
-    const isBank = (x === 40 && z === -40);
-    const h = isBank ? 14 : 10 + Math.random() * 20;
-    const mat = new THREE.MeshLambertMaterial({ color: isBank ? 0xd97706 : 0x64748b });
-    const b = new THREE.Mesh(boxGeo, mat);
-    b.scale.set(22, h, 22);
-    b.position.set(x, h / 2, z);
-    scene.add(b);
-    buildings.push({ x: x, z: z, w: 22, d: 22 });
-  }
-}
-
-const bankPad = new THREE.Mesh(
-  new THREE.CylinderGeometry(3, 3, 0.2, 16),
-  new THREE.MeshBasicMaterial({ color: 0xfacc15 })
-);
-bankPad.position.set(40, 0.1, -26);
-scene.add(bankPad);
-
-const player = new THREE.Group();
-const body = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0x2563eb }));
-body.scale.set(1, 1.8, 0.8);
-body.position.y = 0.9;
-const gun = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
-gun.scale.set(0.2, 0.2, 0.9);
-gun.position.set(0.6, 1.2, 0.5);
-player.add(body, gun);
-scene.add(player);
-
-function createCar(x, z, color) {
-  const car = new THREE.Group();
-  const chassis = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: color }));
-  chassis.scale.set(2.4, 1, 4.5);
-  chassis.position.y = 0.7;
-  const cabin = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0xe2e8f0 }));
-  cabin.scale.set(2, 0.8, 2.2);
-  cabin.position.set(0, 1.5, -0.3);
-  car.add(chassis, cabin);
-  car.position.set(x, 0, z);
-  car.userData = { speed: 0 };
-  scene.add(car);
-  cars.push(car);
-}
-createCar(8, 5, 0xef4444);
-createCar(-12, -15, 0x10b981);
-createCar(20, 25, 0xf59e0b);
-createCar(-25, 30, 0x8b5cf6);
-
-function spawnPed() {
-  const ped = new THREE.Mesh(boxGeo, new THREE.MeshLambertMaterial({ color: 0xf472b6 }));
-  ped.scale.set(0.9, 1.7, 0.7);
-  ped.position.set((Math.random() - 0.5) * 140, 0.85, (Math.random() - 0.5) * 140);
-  ped.userData = { dir: Math.random() * Math.PI * 2, timer: 0 };
-  scene.add(ped);
-  peds.push(ped);
-}
-for (let i = 0; i < 20; i++) spawnPed();
-
-window.addEventListener('keydown', function(e) {
+window.addEventListener('keydown', e => {
   keys[e.code] = true;
   if (e.code === 'KeyE') toggleCar();
   if (e.code === 'Space') handleAction();
 });
-window.addEventListener('keyup', function(e) {
-  keys[e.code] = false;
-});
-window.addEventListener('resize', function() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
-});
+window.addEventListener('keyup', e => keys[e.code] = false);
 
 function toggleCar() {
   if (inCar) {
-    player.position.copy(inCar.position).add(new THREE.Vector3(2.5, 0, 0));
-    player.visible = true;
+    player.x = inCar.x + Math.cos(inCar.angle) * 3.5;
+    player.z = inCar.z - Math.sin(inCar.angle) * 3.5;
     inCar = null;
   } else {
-    for (let i = 0; i < cars.length; i++) {
-      if (player.position.distanceTo(cars[i].position) < 4.5) {
-        inCar = cars[i];
-        player.visible = false;
+    for (let c of cars) {
+      if (Math.hypot(player.x - c.x, player.z - c.z) < 5) {
+        inCar = c;
         wanted = Math.min(5, wanted + 1);
         break;
       }
@@ -130,88 +84,150 @@ function toggleCar() {
 }
 
 function handleAction() {
-  if (!inCar && player.position.distanceTo(bankPad.position) < 3.5) {
+  // Rob Bank if standing on yellow pad
+  if (!inCar && Math.hypot(player.x - bankPad.x, player.z - bankPad.z) < 4.5) {
     cash += 500;
     wanted = Math.min(5, wanted + 2);
     updateHUD();
     return;
   }
 
+  // Shoot Gun
   const now = Date.now();
-  if (now - lastShot < 250) return;
+  if (now - lastShot < 220) return;
   lastShot = now;
 
-  const source = inCar ? inCar : player;
-  const bullet = new THREE.Mesh(boxGeo, new THREE.MeshBasicMaterial({ color: 0xfef08a }));
-  bullet.scale.set(0.2, 0.2, 0.6);
-  bullet.position.copy(source.position);
-  bullet.position.y = 1.2;
-  bullet.rotation.y = source.rotation.y;
-  bullet.userData = { life: 60 };
-  scene.add(bullet);
-  bullets.push(bullet);
+  const src = inCar || player;
+  bullets.push({
+    x: src.x,
+    z: src.z,
+    angle: src.angle,
+    life: 45
+  });
 }
 
-function hitsBuilding(x, z, radius) {
-  for (let i = 0; i < buildings.length; i++) {
-    const b = buildings[i];
-    if (Math.abs(x - b.x) < (b.w / 2 + radius) && Math.abs(z - b.z) < (b.d / 2 + radius)) {
-      return true;
-    }
+function hitsBuilding(x, z, r) {
+  for (let b of buildings) {
+    if (Math.abs(x - b.x) < b.w / 2 + r && Math.abs(z - b.z) < b.d / 2 + r) return true;
   }
   return false;
 }
 
-function animate() {
-  requestAnimationFrame(animate);
+// 3D Projection Math (World X, Y, Z -> Screen X, Y)
+const cam = { x: 0, y: 7, z: -12, angle: 0 };
+function project(wx, wy, wz) {
+  const dx = wx - cam.x;
+  const dy = wy - cam.y;
+  const dz = wz - cam.z;
 
+  const cos = Math.cos(-cam.angle);
+  const sin = Math.sin(-cam.angle);
+  const rx = dx * cos - dz * sin;
+  const rz = dx * sin + dz * cos;
+
+  if (rz <= 0.5) return null; // Behind camera
+  const fov = 450;
+  return {
+    x: canvas.width / 2 + (rx / rz) * fov,
+    y: canvas.height / 2 - (dy / rz) * fov,
+    z: rz
+  };
+}
+
+// Draw a 3D Box in Perspective
+function draw3DBox(x, y, z, w, h, d, angle, sideColor, topColor) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const hw = w / 2, hd = d / 2;
+
+  const corners = [
+    [-hw, -hd], [hw, -hd], [hw, hd], [-hw, hd]
+  ].map(([lx, lz]) => ({
+    x: x + lx * cos - lz * sin,
+    z: z + lx * sin + lz * cos
+  }));
+
+  const bot = corners.map(c => project(c.x, y, c.z));
+  const top = corners.map(c => project(c.x, y + h, c.z));
+  if (bot.includes(null) || top.includes(null)) return;
+
+  // Draw 4 Sides
+  ctx.fillStyle = sideColor;
+  ctx.strokeStyle = '#1e293b';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    const next = (i + 1) % 4;
+    ctx.beginPath();
+    ctx.moveTo(bot[i].x, bot[i].y);
+    ctx.lineTo(bot[next].x, bot[next].y);
+    ctx.lineTo(top[next].x, top[next].y);
+    ctx.lineTo(top[i].x, top[i].y);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  // Draw Roof
+  ctx.fillStyle = topColor;
+  ctx.beginPath();
+  ctx.moveTo(top[0].x, top[0].y);
+  ctx.lineTo(top[1].x, top[1].y);
+  ctx.lineTo(top[2].x, top[2].y);
+  ctx.lineTo(top[3].x, top[3].y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+}
+
+function update() {
+  // Player or Car Physics
   if (inCar) {
-    const d = inCar.userData;
-    if (keys['KeyW'] || keys['ArrowUp']) d.speed = Math.min(d.speed + 0.02, 0.65);
-    else if (keys['KeyS'] || keys['ArrowDown']) d.speed = Math.max(d.speed - 0.02, -0.3);
-    else d.speed *= 0.95;
+    if (keys['KeyW'] || keys['ArrowUp']) inCar.speed = Math.min(inCar.speed + 0.03, 0.85);
+    else if (keys['KeyS'] || keys['ArrowDown']) inCar.speed = Math.max(inCar.speed - 0.03, -0.4);
+    else inCar.speed *= 0.94;
 
-    if (Math.abs(d.speed) > 0.02) {
-      const turn = (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0) - (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0);
-      inCar.rotation.y += turn * 0.045 * Math.sign(d.speed);
+    if (Math.abs(inCar.speed) > 0.03) {
+      const turn = (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) - (keys['KeyA'] || keys['ArrowLeft'] ? 1 : 0);
+      inCar.angle += turn * 0.05 * Math.sign(inCar.speed);
     }
 
-    const nx = inCar.position.x + Math.sin(inCar.rotation.y) * d.speed;
-    const nz = inCar.position.z + Math.cos(inCar.rotation.y) * d.speed;
-    if (!hitsBuilding(nx, nz, 1.8)) {
-      inCar.position.x = nx;
-      inCar.position.z = nz;
+    const nx = inCar.x + Math.sin(inCar.angle) * inCar.speed;
+    const nz = inCar.z + Math.cos(inCar.angle) * inCar.speed;
+    if (!hitsBuilding(nx, nz, 2.2)) {
+      inCar.x = nx;
+      inCar.z = nz;
     } else {
-      d.speed = -d.speed * 0.5;
+      inCar.speed = -inCar.speed * 0.5;
     }
-    player.position.copy(inCar.position);
+    player.x = inCar.x;
+    player.z = inCar.z;
+    player.angle = inCar.angle;
   } else {
-    const moveSpeed = 0.22;
-    if (keys['KeyA'] || keys['ArrowLeft']) player.rotation.y += 0.06;
-    if (keys['KeyD'] || keys['ArrowRight']) player.rotation.y -= 0.06;
+    if (keys['KeyA'] || keys['ArrowLeft']) player.angle -= 0.06;
+    if (keys['KeyD'] || keys['ArrowRight']) player.angle += 0.06;
 
-    let forward = 0;
-    if (keys['KeyW'] || keys['ArrowUp']) forward = moveSpeed;
-    if (keys['KeyS'] || keys['ArrowDown']) forward = -moveSpeed * 0.7;
+    let fwd = 0;
+    if (keys['KeyW'] || keys['ArrowUp']) fwd = 0.28;
+    if (keys['KeyS'] || keys['ArrowDown']) fwd = -0.18;
 
-    const nx = player.position.x + Math.sin(player.rotation.y) * forward;
-    const nz = player.position.z + Math.cos(player.rotation.y) * forward;
-    if (!hitsBuilding(nx, nz, 0.7)) {
-      player.position.x = nx;
-      player.position.z = nz;
+    const nx = player.x + Math.sin(player.angle) * fwd;
+    const nz = player.z + Math.cos(player.angle) * fwd;
+    if (!hitsBuilding(nx, nz, 0.8)) {
+      player.x = nx;
+      player.z = nz;
     }
   }
 
+  // Bullets
   for (let i = bullets.length - 1; i >= 0; i--) {
     const b = bullets[i];
-    b.position.x += Math.sin(b.rotation.y) * 1.4;
-    b.position.z += Math.cos(b.rotation.y) * 1.4;
-    b.userData.life--;
+    b.x += Math.sin(b.angle) * 1.8;
+    b.z += Math.cos(b.angle) * 1.8;
+    b.life--;
 
     let hit = false;
     for (let j = peds.length - 1; j >= 0; j--) {
-      if (b.position.distanceTo(peds[j].position) < 1.3) {
-        scene.remove(peds[j]);
+      if (Math.hypot(b.x - peds[j].x, b.z - peds[j].z) < 1.6) {
         peds.splice(j, 1);
         cash += 50;
         wanted = Math.min(5, wanted + 1);
@@ -221,29 +237,26 @@ function animate() {
         break;
       }
     }
-
-    if (hit || b.userData.life <= 0 || hitsBuilding(b.position.x, b.position.z, 0.2)) {
-      scene.remove(b);
-      bullets.splice(i, 1);
-    }
+    if (hit || b.life <= 0 || hitsBuilding(b.x, b.z, 0.3)) bullets.splice(i, 1);
   }
 
+  // Pedestrians
   for (let i = peds.length - 1; i >= 0; i--) {
     const p = peds[i];
-    p.userData.timer--;
-    if (p.userData.timer <= 0) {
-      p.userData.dir = Math.random() * Math.PI * 2;
-      p.userData.timer = 60 + Math.random() * 100;
+    p.timer--;
+    if (p.timer <= 0) {
+      p.dir = Math.random() * Math.PI * 2;
+      p.timer = 60 + Math.random() * 90;
     }
-    const px = p.position.x + Math.sin(p.userData.dir) * 0.05;
-    const pz = p.position.z + Math.cos(p.userData.dir) * 0.05;
-    if (!hitsBuilding(px, pz, 0.6)) {
-      p.position.x = px;
-      p.position.z = pz;
+    const px = p.x + Math.sin(p.dir) * 0.06;
+    const pz = p.z + Math.cos(p.dir) * 0.06;
+    if (!hitsBuilding(px, pz, 0.7)) {
+      p.x = px;
+      p.z = pz;
     }
 
-    if (inCar && Math.abs(inCar.userData.speed) > 0.15 && p.position.distanceTo(inCar.position) < 2.2) {
-      scene.remove(p);
+    // Run over pedestrian
+    if (inCar && Math.abs(inCar.speed) > 0.2 && Math.hypot(p.x - inCar.x, p.z - inCar.z) < 2.6) {
       peds.splice(i, 1);
       cash += 50;
       wanted = Math.min(5, wanted + 1);
@@ -252,14 +265,91 @@ function animate() {
     }
   }
 
-  const target = inCar ? inCar : player;
-  const dist = inCar ? 12 : 8;
-  const height = inCar ? 6 : 4.5;
-  const camX = target.position.x - Math.sin(target.rotation.y) * dist;
-  const camZ = target.position.z - Math.cos(target.rotation.y) * dist;
-  camera.position.lerp(new THREE.Vector3(camX, height, camZ), 0.12);
-  camera.lookAt(target.position.x, 1.5, target.position.z);
-
-  renderer.render(scene, camera);
+  // Smooth Camera Follow
+  const target = inCar || player;
+  const dist = inCar ? 15 : 10;
+  cam.y = inCar ? 7.5 : 5.5;
+  const goalX = target.x - Math.sin(target.angle) * dist;
+  const goalZ = target.z - Math.cos(target.angle) * dist;
+  cam.x += (goalX - cam.x) * 0.15;
+  cam.z += (goalZ - cam.z) * 0.15;
+  cam.angle = target.angle;
 }
-animate();
+
+function draw() {
+  // Sky & Asphalt Ground
+  ctx.fillStyle = '#7dd3fc';
+  ctx.fillRect(0, 0, canvas.width, canvas.height / 2);
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(0, canvas.height / 2, canvas.width, canvas.height / 2);
+
+  // Collect all 3D objects and sort far-to-near (Painter's Algorithm)
+  const renderList = [];
+
+  // Bank Robbery Pad
+  renderList.push({
+    x: bankPad.x, z: bankPad.z,
+    draw: () => draw3DBox(bankPad.x, 0, bankPad.z, 5, 0.2, 5, 0, '#eab308', '#facc15')
+  });
+
+  // Buildings
+  for (let b of buildings) {
+    renderList.push({
+      x: b.x, z: b.z,
+      draw: () => draw3DBox(b.x, 0, b.z, b.w, b.h, b.d, 0, b.color, b.topColor)
+    });
+  }
+
+  // Cars
+  for (let c of cars) {
+    renderList.push({
+      x: c.x, z: c.z,
+      draw: () => {
+        draw3DBox(c.x, 0, c.z, 2.6, 1.1, 4.8, c.angle, c.color, c.color);
+        draw3DBox(c.x, 1.1, c.z, 2.1, 0.8, 2.4, c.angle, '#cbd5e1', '#f8fafc');
+      }
+    });
+  }
+
+  // Pedestrians
+  for (let p of peds) {
+    renderList.push({
+      x: p.x, z: p.z,
+      draw: () => draw3DBox(p.x, 0, p.z, 0.9, 1.8, 0.9, p.dir, '#ec4899', '#f472b6')
+    });
+  }
+
+  // Player (if on foot)
+  if (!inCar) {
+    renderList.push({
+      x: player.x, z: player.z,
+      draw: () => draw3DBox(player.x, 0, player.z, 1, 1.9, 1, player.angle, '#1d4ed8', '#3b82f6')
+    });
+  }
+
+  // Bullets
+  for (let b of bullets) {
+    renderList.push({
+      x: b.x, z: b.z,
+      draw: () => draw3DBox(b.x, 1.1, b.z, 0.3, 0.3, 0.8, b.angle, '#fef08a', '#fef08a')
+    });
+  }
+
+  // Sort by distance from camera so closer objects draw on top
+  renderList.sort((a, b) => {
+    const distA = Math.hypot(a.x - cam.x, a.z - cam.z);
+    const distB = Math.hypot(b.x - cam.x, b.z - cam.z);
+    return distB - distA;
+  });
+
+  for (let item of renderList) {
+    if (Math.hypot(item.x - cam.x, item.z - cam.z) < 160) item.draw();
+  }
+}
+
+function loop() {
+  update();
+  draw();
+  requestAnimationFrame(loop);
+}
+loop();
