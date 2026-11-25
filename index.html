@@ -6,29 +6,15 @@
   <style>
     body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; user-select: none; }
     canvas { display: block; width: 100vw; height: 100vh; }
-    #hud {
-      position: absolute; top: 15px; left: 15px; color: #fff;
-      background: rgba(0, 0, 0, 0.7); padding: 12px 18px; border-radius: 8px;
-      pointer-events: none; font-size: 16px; line-height: 1.5;
-    }
-    #controls {
-      position: absolute; bottom: 15px; left: 15px; color: #ddd;
-      background: rgba(0, 0, 0, 0.7); padding: 10px 15px; border-radius: 8px;
-      pointer-events: none; font-size: 14px;
-    }
+    #hud { position: absolute; top: 15px; left: 15px; color: #fff; background: rgba(0,0,0,0.75); padding: 12px 18px; border-radius: 8px; pointer-events: none; font-size: 16px; line-height: 1.5; }
+    #controls { position: absolute; bottom: 15px; left: 15px; color: #ddd; background: rgba(0,0,0,0.75); padding: 10px 15px; border-radius: 8px; pointer-events: none; font-size: 14px; }
     .cash { color: #4ade80; font-weight: bold; }
     .wanted { color: #f87171; font-weight: bold; }
   </style>
 </head>
 <body>
-  <div id="hud">
-    <div>Cash: <span class="cash" id="cash">$0</span></div>
-    <div>Wanted: <span class="wanted" id="wanted">☆☆☆☆☆</span></div>
-    <div>Mode: <span id="mode">On Foot</span></div>
-  </div>
-  <div id="controls">
-    <b>WASD / Arrows:</b> Move &amp; Steer | <b>E:</b> Steal / Exit Car | <b>Space:</b> Shoot / Rob Bank
-  </div>
+  <div id="hud"><div>Cash: <span class="cash" id="cash">$0</span></div><div>Wanted: <span class="wanted" id="wanted">☆☆☆☆☆</span></div><div>Mode: <span id="mode">On Foot</span></div></div>
+  <div id="controls"><b>WASD / Arrows:</b> Move &amp; Steer | <b>E:</b> Steal / Exit Car | <b>Space:</b> Shoot / Rob Bank</div>
   <canvas id="game"></canvas>
   <script src="game.js"></script>
 </body>
